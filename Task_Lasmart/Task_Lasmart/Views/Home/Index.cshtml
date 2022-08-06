@@ -1,0 +1,280 @@
+﻿@{
+    ViewData["Title"] = "Lasmart";
+}
+
+<div id="PointsId" class="container">
+    <div class="row">
+
+        <div class="col-2 preview ">
+
+            <span class="badge badge-primary">Параметры новой точки</span>
+
+        </div>
+
+        <div class="col-2 pl-0 pr-3 pb-3 pt-0">
+
+            <input id="OxId" placeholder="Координата Х" class="form-control text-center" />
+
+        </div>
+
+        <div class="col-2 pl-0 pr-3 pb-3 pt-0">
+
+            <input id="OyId" placeholder="Координата У" class="form-control text-center" />
+
+        </div>
+
+        <div class="col-1 pl-0 pr-3 pb-3 pt-0">
+
+            <input id="RadiusId" placeholder="Радиус" class="form-control text-center" />
+
+        </div>
+
+        <div class="col-2 pl-0 pr-3 pb-3 pt-0">
+
+            <select class="form-control text-center" id="ColourId" name="ColourId">
+                <option value=""> Цвет </option>
+
+                <option value="#ff0000">Красный</option>
+
+                <option value="#0000ff">Синий</option>
+
+                <option value="#ffc0cb">Розовый</option>
+
+            </select>
+
+        </div>
+
+        <div class="pl-0 pr-3 pb-3 pt-0 ">
+
+            <button id="ButtonAddNewPointNew" style="margin-right: 5px; height: 38px;" class="btn-sm btn-primary">Добавить точку в бд</button>
+        </div>
+
+    </div>
+
+    <div class="row">
+
+        <div class="col-2 preview ">
+
+            <span class="badge badge-primary">Добавление комментария</span>
+
+        </div>
+
+        <div class="col-3 pl-0 pr-3 pb-3 pt-0">
+
+            @Html.DropDownList("PointId", null, "Выберите точку по Id", htmlAttributes: new { @class = "form-control text-center" })
+
+        </div>
+
+        <div class="col-2 pl-0 pr-3 pb-3 pt-0">
+
+            <select class="form-control text-center" id="BackColourId">
+                <option value=""> Цвет подложки </option>
+
+                <option value="#808080">Серый</option>
+
+                <option value="#ffff00">Жёлтый</option>
+
+            </select>
+
+        </div>
+
+        <div class="col-3 pl-0 pr-3 pb-3 pt-0">
+
+            <input id="CommentsId" placeholder="Добавьте комментарий" class="form-control text-center" />
+
+        </div>
+
+
+
+        <div class="pl-0 pr-3 pb-3 pt-0">
+
+            <button id="ButtonAddComment" style="margin-right: 5px; height: 38px;" class="btn-sm btn-primary">+комментарий</button>
+
+        </div>
+
+    </div>
+
+    <div class="row ">
+        <div class="col-2 preview ">
+
+            <span class="badge badge-primary">Добавление точки из бд</span>
+
+        </div>
+
+        
+
+        <div class="pl-0 pr-3 pb-3 pt-0 ">
+
+            <button id="ButtonAddPointNew" style="margin-right: 5px; height: 38px;" class="btn-sm btn-primary">Добавить</button>
+        </div>
+
+    </div>
+
+
+    <div id="box">
+
+
+
+    </div>
+
+</div>
+
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://unpkg.com/konva@8/konva.min.js"></script>
+
+
+    <script>
+
+
+        
+        function AddPoint(json) {
+            var width = 1000;
+            var height = 440;
+
+            // создаём контейнер
+            var stage = new Konva.Stage({
+                container: 'box',
+                width: width,
+                height: height
+            });
+
+            // создаём слой
+            var layer = new Konva.Layer();
+
+            //В цикле создаём группу и добавляем в неё точку, событие удаления по двойному щелчку, комментарии к точке
+
+            for (var i = 0; i < json.length; i++) {
+
+                var group = new Konva.Group();
+                var circle = new Konva.Circle({
+                    x: json[i].ox,
+                    y: json[i].oy,
+                    radius: json[i].radius,
+                    fill: json[i].colour, 
+                    name: json[i].id + ''
+                })
+                circle.on('dblclick', function (e) {
+
+                    var pointid = e.currentTarget.attrs.name; // currentTarget - ссылается на объект события attrs - атрибуты
+                    $.ajax({
+                        url: "/Home/RemovePoint",
+                        type: "post",
+                        data: { 'pointid': pointid },
+                        success: function () {
+                            if (pointid) {
+                                var shapes = stage.find('.' + pointid);
+                                for (var i = 0; i < shapes.length; i++) {
+                                    shapes[i].destroy();
+                                }
+                                layer.draw();
+                                
+                            } else { alert("Error") }
+                        }
+                    });
+                })
+                group.add(circle)
+
+                var BeginPosition = json[i].oy + json[i].radius + 8;
+
+                for (var j = 0; j < json[i].comments.length; j++) {
+                    var commentsLabel = new Konva.Label({
+                        x: (json[i].ox - (json[i].comments[j].text.length * 6)),
+                        y: BeginPosition,
+                        opacity: 0.8,
+                    });
+
+                    commentsLabel.add(
+                        new Konva.Tag({
+                            fill: json[i].comments[j].backgroundColor,
+                            stroke: "Grey",
+                            name: json[i].id + ''
+                        })
+                    );
+
+                    commentsLabel.add(
+                        new Konva.Text({
+                            text: json[i].comments[j].text,
+                            fontFamily: 'Calibri',
+                            fontSize: 18,
+                            padding: 5,
+                            fill: 'Green',
+                            name: json[i].id + ''
+                        })
+                    );
+                    group.add(commentsLabel)
+                    BeginPosition += 35;
+                }
+
+                layer.add(group);
+
+            }
+            stage.add(layer);
+        }
+
+        
+
+
+
+        $(document).ready(async function () {
+
+            // добавить точку из бд
+            $('#ButtonAddPointNew').click(function () {
+                $.ajax({
+                    url: "/Home/GetPointComment",
+                    
+                    type: "POST",
+                    success: function (json) {
+                        var points = JSON.parse(json); //массив поинтов
+                        AddPoint(points);
+                    }
+                });
+            });
+
+
+
+            //Добавить точку в бд
+            $('#ButtonAddNewPointNew').click(function () {
+
+                var ox = $('#OxId').val()
+                var oy = $('#OyId').val()
+                var radius = $('#RadiusId').val()
+                var colour = $('#ColourId').val()
+
+
+                $.ajax({
+                    url: "/Home/AddNewPoint",
+                    data: { 'ox': ox, 'oy': oy, 'radius': radius, 'colour': colour },
+                    type: "POST",
+                    success: function () {
+                        
+                        window.location.href = '/Home/Index';
+                        
+                    }
+
+                });
+
+            });
+
+            //Добавить комментарий
+            $('#ButtonAddComment').click(function () {
+
+                var pointId = $('#PointId').val();
+                var Text = $('#CommentsId').val();
+                var backgroundColor = $('#BackColourId').val();
+
+
+                $.ajax({
+                    url: "/Home/AddComment",
+                    data: { 'pointId': pointId, 'Text': Text, 'backgroundColor': backgroundColor  },
+                    type: "POST",
+
+
+                });
+
+            });
+
+        });
+
+
+    </script>
